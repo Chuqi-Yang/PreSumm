@@ -8,7 +8,6 @@ import torch
 from others.logging import logger
 
 
-
 class Batch(object):
     def _pad(self, data, pad_id, width=-1):
         if (width == -1):
@@ -33,7 +32,6 @@ class Batch(object):
             mask_src = 1 - (src == 0)
             mask_tgt = 1 - (tgt == 0)
 
-
             clss = torch.tensor(self._pad(pre_clss, -1))
             src_sent_labels = torch.tensor(self._pad(pre_src_sent_labels, 0))
             mask_cls = 1 - (clss == -1)
@@ -42,13 +40,11 @@ class Batch(object):
             setattr(self, 'mask_cls', mask_cls.to(device))
             setattr(self, 'src_sent_labels', src_sent_labels.to(device))
 
-
             setattr(self, 'src', src.to(device))
             setattr(self, 'tgt', tgt.to(device))
             setattr(self, 'segs', segs.to(device))
             setattr(self, 'mask_src', mask_src.to(device))
             setattr(self, 'mask_tgt', mask_tgt.to(device))
-
 
             if (is_test):
                 src_str = [x[-2] for x in data]
@@ -58,8 +54,6 @@ class Batch(object):
 
     def __len__(self):
         return self.batch_size
-
-
 
 
 def load_dataset(args, corpus_type, shuffle):
@@ -81,7 +75,17 @@ def load_dataset(args, corpus_type, shuffle):
         return dataset
 
     # Sort the glob output by file name (by increasing indexes).
-    pts = sorted(glob.glob(args.bert_data_path + '.' + corpus_type + '.[0-9]*.pt'))
+    # line below doesn't work in mac os
+
+    # pts = sorted(glob.glob(args.bert_data_path + '.' + corpus_type + '.[0-9]*.pt'))
+
+    ## recover above line and delete below lines to recover from unix system
+    from os import listdir
+    from os.path import isfile, join
+    pts = [join(args.bert_data_path, f) for f in listdir(args.bert_data_path) if isfile(join(args.bert_data_path, f))]
+    #### stop deleting line
+
+    ####
     if pts:
         if (shuffle):
             random.shuffle(pts)
@@ -99,8 +103,8 @@ def abs_batch_size_fn(new, count):
     global max_n_sents, max_n_tokens, max_size
     if count == 1:
         max_size = 0
-        max_n_sents=0
-        max_n_tokens=0
+        max_n_sents = 0
+        max_n_tokens = 0
     max_n_sents = max(max_n_sents, len(tgt))
     max_size = max(max_size, max_n_sents)
     src_elements = count * max_size
@@ -125,7 +129,7 @@ def ext_batch_size_fn(new, count):
 
 
 class Dataloader(object):
-    def __init__(self, args, datasets,  batch_size,
+    def __init__(self, args, datasets, batch_size,
                  device, shuffle, is_test):
         self.args = args
         self.datasets = datasets
@@ -143,7 +147,6 @@ class Dataloader(object):
                 yield batch
             self.cur_iter = self._next_dataset_iterator(dataset_iter)
 
-
     def _next_dataset_iterator(self, dataset_iter):
         try:
             # Drop the current dataset for decreasing memory
@@ -157,13 +160,13 @@ class Dataloader(object):
         except StopIteration:
             return None
 
-        return DataIterator(args = self.args,
-            dataset=self.cur_dataset,  batch_size=self.batch_size,
-            device=self.device, shuffle=self.shuffle, is_test=self.is_test)
+        return DataIterator(args=self.args,
+                            dataset=self.cur_dataset, batch_size=self.batch_size,
+                            device=self.device, shuffle=self.shuffle, is_test=self.is_test)
 
 
 class DataIterator(object):
-    def __init__(self, args, dataset,  batch_size, device=None, is_test=False,
+    def __init__(self, args, dataset, batch_size, device=None, is_test=False,
                  shuffle=True):
         self.args = args
         self.batch_size, self.is_test, self.dataset = batch_size, is_test, dataset
@@ -185,18 +188,13 @@ class DataIterator(object):
         xs = self.dataset
         return xs
 
-
-
-
-
-
     def preprocess(self, ex, is_test):
         src = ex['src']
-        tgt = ex['tgt'][:self.args.max_tgt_len][:-1]+[2]
+        tgt = ex['tgt'][:self.args.max_tgt_len][:-1] + [2]
         src_sent_labels = ex['src_sent_labels']
         segs = ex['segs']
-        if(not self.args.use_interval):
-            segs=[0]*len(segs)
+        if (not self.args.use_interval):
+            segs = [0] * len(segs)
         clss = ex['clss']
         src_txt = ex['src_txt']
         tgt_txt = ex['tgt_txt']
@@ -209,9 +207,7 @@ class DataIterator(object):
         clss = clss[:max_sent_id]
         # src_txt = src_txt[:max_sent_id]
 
-
-
-        if(is_test):
+        if (is_test):
             return src, tgt, segs, clss, src_sent_labels, src_txt, tgt_txt
         else:
             return src, tgt, segs, clss, src_sent_labels
@@ -219,10 +215,10 @@ class DataIterator(object):
     def batch_buffer(self, data, batch_size):
         minibatch, size_so_far = [], 0
         for ex in data:
-            if(len(ex['src'])==0):
+            if (len(ex['src']) == 0):
                 continue
             ex = self.preprocess(ex, self.is_test)
-            if(ex is None):
+            if (ex is None):
                 continue
             minibatch.append(ex)
             size_so_far = self.batch_size_fn(ex, len(minibatch))
@@ -263,12 +259,11 @@ class DataIterator(object):
 
             p_batch = self.batch(p_batch, self.batch_size)
 
-
             p_batch = list(p_batch)
             if (self.shuffle):
                 random.shuffle(p_batch)
             for b in p_batch:
-                if(len(b)==0):
+                if (len(b) == 0):
                     continue
                 yield b
 
